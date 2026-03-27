@@ -44,6 +44,23 @@ class Otello(js.JuegoZT2):
 
         return False
 
+    def jugadas_legales(self, s, j):
+        jugadas = []
+
+        for a in range(64):
+            if s[a] != 0:
+                continue
+
+            fila = a // 8
+            columna = a % 8
+
+            for df, dc in self.movimientos:
+                if self.hay_captura(s, fila, columna, df, dc, j):
+                    jugadas.append(a)
+                    break
+
+        return jugadas if jugadas else [None]
+
     def imprimir_tablero(self, s):
         for i in range(8):
             fila = s[i*8:(i+1)*8]
