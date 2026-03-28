@@ -1,4 +1,5 @@
 import juegos_simplificado as js
+import minimax
 
 class Otello(js.JuegoZT2):
 
@@ -115,19 +116,150 @@ class Otello(js.JuegoZT2):
                     print(".", end=" ")
             print()
 
+class InterfaceOtello(js.JuegoInterface):
+    def muestra_estado(self, s):
+        print("\nEstado actual del tablero:")
+        self.juego.imprimir_tablero(s)
+
+    def muestra_ganador(self, g):
+        print("\nResultado final:")
+
+        if g == 1:
+            print("Gana jugador X (negras)")
+        elif g == -1:
+            print("Gana jugador O (blancas)")
+        else:
+            print("Empate")
+
+    def jugador_humano(self, s, j):
+        print("\nTurno del jugador:", "X" if j == 1 else "O")
+
+        jugadas = self.juego.jugadas_legales(s,j)
+
+        if jugadas == [None]:
+            print("No hay jugadas disponibles. Se pasa turno.")
+            input("Presiona ENTER para continuar...")
+            return None
+        
+        print("Jugadas posibles:")
+
+        for a in jugadas:
+            f = a // 8
+            c = a % 8
+            print(f"{a} -> ({f},{c})")
+
+        while True:
+            entrada = input("Elige una jugada (número):")
+
+            try:
+                a = int(entrada)
+                if a in jugadas:
+                    return a
+                else:
+                    print("Jugada inválida.")
+            except ValueError:
+                print("Entrada inválida.")
+
+def ordena_otello(jugadas, jugador):
+    esquinas = [0, 7, 56, 63]
+    bordes = [
+        1, 2, 3, 4, 5, 6,
+        8, 16, 24, 32, 40, 48,
+        15, 23, 31, 39, 47, 55,
+        57, 58, 59, 60, 61, 62
+    ]
+
+    jugadas_ordenadas = []
+    otras = []
+
+    for a in jugadas:
+        if a is None:
+            otras.append(a)
+        elif a in esquinas:
+            jugadas_ordenadas.append(a)
+
+    for a in jugadas:
+        if a is not None and a not in jugadas_ordenadas and a in bordes:
+            jugadas_ordenadas.append(a)
+
+    for a in jugadas:
+        if a not in jugadas_ordenadas:
+            otras.append(a)
+
+    return jugadas_ordenadas + otras
+
+def evalua_otello(s):
+    esquinas = [0, 7, 56, 63]
+    bordes = [
+        1, 2, 3, 4, 5, 6,
+        8, 16, 24, 32, 40, 48,
+        15, 23, 31, 39, 47, 55,
+        57, 58, 59, 60, 61, 62
+    ]
+
+    fichas_j1 = s.count(1)
+    fichas_j2 = s.count(-1)
+
+    valor_fichas = fichas_j1 - fichas_j2
+
+    esquinas_j1 = 0
+    esquinas_j2 = 0
+    for e in esquinas:
+        if s[e] == 1:
+            esquinas_j1 += 1
+        elif s[e] == -1:
+            esquinas_j2 += 1
+
+    valor_esquinas = esquinas_j1 - esquinas_j2
+
+    bordes_j1 = 0
+    bordes_j2 = 0
+    for b in bordes:
+        if s[b] == 1:
+            bordes_j1 += 1
+        elif s[b] == -1:
+            bordes_j2 += 1
+
+    valor_bordes = bordes_j1 - bordes_j2
+
+    valor = 2 * valor_fichas + 10 * valor_esquinas + 4 * valor_bordes
+
+    if valor > 100:
+        valor = 100
+    if valor < -100:
+        valor = -100
+
+    return valor / 100
+
 if __name__ == "__main__":
-    juego = Otello()
-    s = juego.inicializa()
 
-    print("Estado inicial:")
-    print(s)
+    cfg = {
+        "Jugador 1": "Humano",
+        "Jugador 2": "Negamax",  
+    }
 
-    fila = 2
-    columna = 3
-    j = 1
+    def jugador_cfg(tipo):
+        if tipo == "Humano":
+            return "Humano"
+        elif tipo == "Aleatorio":
+            return js.JugadorAleatorio()
+        elif tipo == "Negamax":
+            return minimax.JugadorNegamax(
+                ordena=ordena_otello,
+                d=5,
+                evalua=evalua_otello
+            )
+        else:
+            raise ValueError("Jugador no válido")
 
-    print("\nProbando captura en (2,3) para jugador 1:")
-    for df, dc in juego.movimientos:
-        print(df, dc, "->", juego.hay_captura(s, fila, columna, df, dc, j))
+    interfaz = InterfaceOtello(
+        Otello(),
+        jugador1=jugador_cfg(cfg["Jugador 1"]),
+        jugador2=jugador_cfg(cfg["Jugador 2"])
+    )
 
-    juego.imprimir_tablero(s)
+    print("JUEGO OTHELLO")
+    print("Jugador 1:", cfg["Jugador 1"])
+    print("Jugador 2:", cfg["Jugador 2"])
+
+    interfaz.juega()
