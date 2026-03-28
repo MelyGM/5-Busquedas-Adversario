@@ -2,24 +2,58 @@ import juegos_simplificado as js
 import minimax
 
 class Otello(js.JuegoZT2):
+    """
+    Clase que define la lógica del juego Otello.
+    Hereda de JuegoZT2.
+    """
 
     def __init__(self):
+        """
+        Define las direcciones posibles en el tablero:
+        horizontales, verticales y diagonales.
+        """
         self.movimientos = [(-1,-1), (-1,0), (-1,1),
                             ( 0,-1),         ( 0,1),
                             ( 1,-1), ( 1,0), ( 1,1)]
 
     def inicializa(self):
+        """
+        Crea el estado inicial del tablero (8x8).
+
+        Se representa como una tupla de 64 posiciones:
+        - 0: vacío
+        - 1: jugador 1 (X)
+        - -1: jugador 2 (O)
+
+        Se colocan las 4 fichas iniciales en el centro.
+        """
         s = [0] * 64
         s[27], s[28], s[35], s[36] = -1, 1, 1, -1
         return tuple(s)
 
     def pos(self, fila, columna):
+        """
+        Convierte coordenadas (fila, columna)
+        a índice lineal del tablero.
+        """
         return fila * 8 + columna
 
     def dentro(self, fila, columna):
+        """
+        Verifica si una posición está dentro del tablero.
+        """
         return 0 <= fila < 8 and 0 <= columna < 8
 
     def hay_captura(self, s, fila, columna, df, dc, j):
+        """
+        Verifica si al colocar una ficha en una dirección
+        se capturan fichas del rival.
+
+        - df, dc: dirección
+        - j: jugador actual
+
+        Regresa True si hay captura, False en caso contrario.
+        """
         fila += df
         columna += dc
 
@@ -46,6 +80,12 @@ class Otello(js.JuegoZT2):
         return False
 
     def jugadas_legales(self, s, j):
+        """
+        Regresa todas las jugadas válidas para el jugador j.
+
+        Si no hay jugadas disponibles, regresa [None]
+        (indica que el jugador pasa turno).
+        """
         jugadas = []
 
         for a in range(64):
@@ -63,6 +103,12 @@ class Otello(js.JuegoZT2):
         return jugadas if jugadas else [None]
 
     def sucesor(self, s, a, j):
+        """
+        Genera el siguiente estado después de una jugada.
+
+        - Coloca la ficha
+        - Voltea las fichas capturadas
+        """
         if a is None:
             return s
 
@@ -85,9 +131,23 @@ class Otello(js.JuegoZT2):
         return tuple(s)
 
     def terminal(self, s):
+        """
+        Determina si el juego terminó.
+
+        El juego termina cuando:
+        - No hay espacios vacíos, o
+        - Ningún jugador tiene jugadas legales
+        """
         return 0 not in s or (self.jugadas_legales(s, 1) == [None] and self.jugadas_legales(s, -1) == [None])
 
     def ganancia(self, s):
+        """
+        Calcula el resultado del juego:
+
+        1  -> gana jugador 1
+        -1 -> gana jugador 2
+        0  -> empate
+        """
         j1 = s.count(1)
         j2 = s.count(-1)
 
@@ -117,6 +177,10 @@ class Otello(js.JuegoZT2):
             print()
 
 class InterfaceOtello(js.JuegoInterface):
+    """
+    Interfaz de consola para jugar Otello.
+    Permite interacción entre jugador humano y la IA.
+    """
     def muestra_estado(self, s):
         print("\nEstado actual del tablero:")
         self.juego.imprimir_tablero(s)
@@ -132,6 +196,12 @@ class InterfaceOtello(js.JuegoInterface):
             print("Empate")
 
     def jugador_humano(self, s, j):
+        """
+        Permite al usuario ingresar jugadas desde consola.
+
+        - Muestra jugadas posibles
+        - Valida la entrada
+        """
         print("\nTurno del jugador:", "X" if j == 1 else "O")
 
         jugadas = self.juego.jugadas_legales(s,j)
@@ -161,6 +231,14 @@ class InterfaceOtello(js.JuegoInterface):
                 print("Entrada inválida.")
 
 def ordena_otello(jugadas, jugador):
+    """
+    Ordena las jugadas para mejorar la búsqueda.
+
+    Prioridad:
+    1. Esquinas (más importantes)
+    2. Bordes
+    3. Otras jugadas
+    """
     esquinas = [0, 7, 56, 63]
     bordes = [
         1, 2, 3, 4, 5, 6,
@@ -189,6 +267,17 @@ def ordena_otello(jugadas, jugador):
     return jugadas_ordenadas + otras
 
 def evalua_otello(s):
+    """
+    Evalúa el estado del tablero.
+
+    Factores considerados:
+    - Diferencia de fichas
+    - Control de esquinas
+    - Control de bordes
+
+    Se asignan pesos a cada característica.
+    Regresa un valor entre -1 y 1.
+    """
     esquinas = [0, 7, 56, 63]
     bordes = [
         1, 2, 3, 4, 5, 6,
